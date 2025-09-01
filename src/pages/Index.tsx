@@ -29,8 +29,11 @@ const Index = () => {
     phone: '',
     address: '',
     set: '',
-    duration: '',
+    startDate: '',
+    endDate: '',
+    deliveryType: 'pickup', // 'pickup' или 'delivery'
     master: false,
+    masterHours: 1,
     delivery: false
   });
 
@@ -98,11 +101,12 @@ const Index = () => {
     const message = `Новая бронь:
 Имя: ${bookingData.name}
 Телефон: ${bookingData.phone}
-Адрес: ${bookingData.address}
+${bookingData.deliveryType === 'delivery' ? `Адрес: ${bookingData.address}` : 'Самовывоз'}
 Набор: ${bookingData.set}
-Длительность: ${bookingData.duration}
-Мастер: ${bookingData.master ? 'Да' : 'Нет'}
-Доставка: ${bookingData.delivery ? 'Да' : 'Нет'}`;
+Дата начала: ${bookingData.startDate}
+Дата окончания: ${bookingData.endDate}
+Мастер: ${bookingData.master ? `Да (${bookingData.masterHours} ч.)` : 'Нет'}
+Доставка: ${bookingData.delivery ? 'Да (расчёт с менеджером от 200₽)' : 'Нет'}`;
     
     alert('Заявка отправлена! Мы свяжемся с вами для подтверждения.');
   };
@@ -282,76 +286,122 @@ const Index = () => {
               </div>
               
               <div>
-                <Label htmlFor="address">Адрес доставки *</Label>
-                <Input
-                  id="address"
-                  value={bookingData.address}
-                  onChange={(e) => setBookingData({...bookingData, address: e.target.value})}
-                  placeholder="Улица, дом, квартира"
-                />
+                <Label>Способ получения *</Label>
+                <Select value={bookingData.deliveryType} onValueChange={(value) => setBookingData({...bookingData, deliveryType: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите способ получения" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pickup">Самовывоз</SelectItem>
+                    <SelectItem value="delivery">Доставка</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {bookingData.deliveryType === 'delivery' && (
+                <div>
+                  <Label htmlFor="address">Адрес доставки *</Label>
+                  <Input
+                    id="address"
+                    value={bookingData.address}
+                    onChange={(e) => setBookingData({...bookingData, address: e.target.value})}
+                    placeholder="Улица, дом, квартира"
+                  />
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="set">Выберите набор *</Label>
+                <Select value={bookingData.set} onValueChange={(value) => setBookingData({...bookingData, set: value})}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Выберите набор" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hookahSets.map((set) => (
+                      <SelectItem 
+                        key={set.id} 
+                        value={set.name}
+                        disabled={set.available === 0}
+                      >
+                        {set.name} {set.available === 0 && '(нет в наличии)'}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="set">Выберите набор *</Label>
-                  <Select value={bookingData.set} onValueChange={(value) => setBookingData({...bookingData, set: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Выберите набор" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {hookahSets.map((set) => (
-                        <SelectItem 
-                          key={set.id} 
-                          value={set.name}
-                          disabled={set.available === 0}
-                        >
-                          {set.name} {set.available === 0 && '(нет в наличии)'}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="startDate">Дата начала аренды *</Label>
+                  <Input
+                    id="startDate"
+                    type="datetime-local"
+                    value={bookingData.startDate}
+                    onChange={(e) => setBookingData({...bookingData, startDate: e.target.value})}
+                  />
                 </div>
                 <div>
-                  <Label htmlFor="duration">Длительность *</Label>
-                  <Select value={bookingData.duration} onValueChange={(value) => setBookingData({...bookingData, duration: value})}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Выберите время" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="1 час">1 час</SelectItem>
-                      <SelectItem value="2 часа">2 часа</SelectItem>
-                      <SelectItem value="3 часа">3 часа</SelectItem>
-                      <SelectItem value="сутки">Сутки</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label htmlFor="endDate">Дата окончания аренды *</Label>
+                  <Input
+                    id="endDate"
+                    type="datetime-local"
+                    value={bookingData.endDate}
+                    onChange={(e) => setBookingData({...bookingData, endDate: e.target.value})}
+                  />
                 </div>
               </div>
 
-              <div className="flex gap-6">
-                <label className="flex items-center space-x-2 cursor-pointer">
+              <div className="space-y-4">
+                <div className="flex items-center space-x-3">
                   <input
                     type="checkbox"
+                    id="master"
                     checked={bookingData.master}
                     onChange={(e) => setBookingData({...bookingData, master: e.target.checked})}
                     className="rounded border-gray-300"
                   />
-                  <span>Нужен мастер (+1000₽/час)</span>
-                </label>
-                <label className="flex items-center space-x-2 cursor-pointer">
+                  <Label htmlFor="master" className="cursor-pointer">Нужен мастер (+1000₽/час)</Label>
+                </div>
+                
+                {bookingData.master && (
+                  <div className="ml-6">
+                    <Label htmlFor="masterHours">Количество часов мастера *</Label>
+                    <Select value={bookingData.masterHours.toString()} onValueChange={(value) => setBookingData({...bookingData, masterHours: parseInt(value)})}>
+                      <SelectTrigger className="w-32">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[1,2,3,4,5,6,7,8].map(hour => (
+                          <SelectItem key={hour} value={hour.toString()}>{hour} час{hour > 1 && hour < 5 ? 'а' : hour >= 5 ? 'ов' : ''}</SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div className="flex items-center space-x-3">
                   <input
                     type="checkbox"
+                    id="delivery"
                     checked={bookingData.delivery}
                     onChange={(e) => setBookingData({...bookingData, delivery: e.target.checked})}
                     className="rounded border-gray-300"
                   />
-                  <span>Доставка (от 200₽)</span>
-                </label>
+                  <Label htmlFor="delivery" className="cursor-pointer">Доставка (расчёт с менеджером от 200₽)</Label>
+                </div>
               </div>
 
               <Button 
                 onClick={handleBooking} 
                 className="w-full text-lg py-6 bg-gradient-to-r from-primary to-secondary hover:from-primary/90 hover:to-secondary/90"
-                disabled={!bookingData.name || !bookingData.phone || !bookingData.address || !bookingData.set || !bookingData.duration}
+                disabled={
+                  !bookingData.name || 
+                  !bookingData.phone || 
+                  (bookingData.deliveryType === 'delivery' && !bookingData.address) ||
+                  !bookingData.set || 
+                  !bookingData.startDate || 
+                  !bookingData.endDate
+                }
               >
                 <Icon name="Send" size={20} className="mr-2" />
                 Отправить заявку
